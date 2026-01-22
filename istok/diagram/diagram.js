@@ -1,0 +1,353 @@
+class Relation {
+    static Type = Object.freeze({
+	    Independance: 'Independance',
+	    Compatibility: 'Compatibility',
+	    Incompatibility: 'Incompatibility'
+    });
+}
+
+class ElementRole {
+    #roles = new Map();
+    #index = 0;
+
+    getId(name) {
+        for (let pair of this.#roles.entries()) {
+            if (pair[1] == name) return pair[0];
+        }
+
+        return undefined;
+    }
+
+    getName(id) {
+        return this.#roles.get(id);
+    }
+
+    getAll() {
+        return this.#roles.values();
+    }
+
+    create(name) {
+        if (this.getId(name)) {
+            return null;
+        }
+        else {
+            this.#roles.set(this.#index, name);
+            return this.#index++;
+        }
+    }
+
+    delete(id) {
+        this.#roles.delete(id);
+    }
+}
+
+class Component {
+    _designation = "";
+    _name = "";
+    description = "";
+    _relationType = Relation.Type.Independance;
+    _content = new Set();
+
+    constructor(designation, name="") {
+	    this._designation = designation;
+        this._name = name;
+    }
+
+    get designation() {
+        return this._designation;
+    }
+
+    get name() {
+        return this._name;
+    }
+
+    set name(newName) {
+        this._name = newName;
+    }
+
+    get relationType() {
+        this._relationType;
+    }
+
+    set relationType(newType) {
+        this._relationType = newType;
+    }
+
+    getNested() {
+        return Array.from(this._content);
+    }
+
+    addNested(component) {
+        this._content.add(component.designation);
+    }
+
+    deleteNested(component) {
+        this._content.delete(component.designation);
+    }
+
+    equalTo(target) {
+        if (this.designation === target.designation)
+            return true;
+
+        if (this.name === target.name) {
+            if (this.constructor !== target.constructor)
+                return false;
+            if (this.name === '')
+                return false;
+        }
+
+        return true;
+    }
+
+    serialize() {
+        const map = new Map();
+
+        map.set('designation', this._designation);
+        map.set('name', this._name);
+        map.set('description', this.description);
+
+        return map;
+    }
+
+    deserialize(map) {
+        this._name = map.get('name');
+        this.description = map.get('description');
+    }
+}
+
+class Property extends Component {
+    #possibleValues = new Map();
+    #index = 0;
+    #referenceValue = 0;
+    #actualValue = 0;
+
+    getPossibleValue(id) {
+        return this.#possibleValues.get(id);
+    }
+
+    getPossibleValueByValue(value) {
+        for (let pair of this.#possibleValues.entries()) {
+            if (pair[1] === value) return pair[0];
+        }
+
+        return undefined;
+    }
+
+    getPossibleValues() {
+        return this.#possibleValues.values();
+    }
+
+    get referenceValue() {
+        return this.#referenceValue;
+    }
+
+    set referenceValue(id) {
+        this.#referenceValue = id;
+    }
+
+    get actualValue() {
+        return this.#actualValue;
+    }
+
+    set actualValue(id) {
+        this.#actualValue = id;
+    }
+
+    addPossibleValue(value) {
+        if (this.getPossibleValueByValue(value)) {
+            return null;
+        }
+        else {
+            this.#possibleValues.set(this.#index, value);
+            return this.#index++;
+        }
+    }
+
+    deletePossibleValue(id) {
+        this.#possibleValues.delete(id);
+    }
+
+    isComplete() {
+        return this.#referenceValue === this.#actualValue;
+    }
+
+    serialize() {
+        
+    }
+
+    deserialize(map) {
+        
+    }
+}
+
+class Element extends Component {
+    #context = new Set();
+
+    getContexts() {
+        return Array.from(this.#context);
+    }
+
+    getContextsByDesig(designation) {
+        for (let entry of this.#context.values()) {
+            if (entry[0] == designation) return entry;
+        }
+
+        return undefined;
+    }
+
+    getContextsByRole(role) {
+        for (let entry of this.#context.values()) {
+            if (entry[1] == role) return entry;
+        }
+
+        return undefined;
+    }
+
+    addContext(designation, role) {
+        this.#context.add([designation, role]);
+    }
+
+    deleteContext(designation, role) {
+        // using for because Map.delete() uses references, not values
+        for (let entry of this.#context.values()) {
+            if (entry[0] === designation && entry[1] === role)
+                this.#context.delete(entry);
+        }
+    }
+
+    serialize() {
+        
+    }
+
+    deserialize(map) {
+        
+    }
+}
+
+class Process extends Component {
+    #iteration = 0;
+    #isHiding = false;
+
+    get iteration() {
+        return this.#iteration;
+    }
+
+    set iteration(newValue) {
+        this.#iteration = newValue;
+    }
+
+    addNested(component, role=null) {
+        if (component instanceof Element)
+            component.addContext(this.designation, role);
+        super.addNested(component);
+    }
+
+    deleteNested(component, role=null) {
+        if (component instanceof Element)
+            component.deleteContext(this.designation, role);
+        super.deleteNested(component);
+    }
+
+    equalTo(target) {
+        if (!super.equalTo(target))
+            return false;
+        return this.iteration === target.iteration;
+    }
+
+    serialize() {
+        const map = super.serialize();
+
+        map.set('iteration', this.#iteration);
+        map.set('isHiding', this.#isHiding);
+
+        return map;
+    }
+
+    deserialize(map) {
+        super.deserialize(map);
+        this.#iteration = map.get('iteration');
+        this.#isHiding = map.get('isHiding');
+    }
+}
+
+class ComponentManager {
+    #repository = new Map();
+    #roles = undefined;
+
+    costructor(roles) {
+        this.#roles = roles;
+    }
+
+    // this ugly-looking switch is required
+    static designate(componentClass, index) {
+        switch (componentClass) {
+        case Process:
+            return 'П ' + index.toString();
+            break;
+        case Element:
+            return 'Э ' + index.toString();
+            break;
+        case Property:
+            return 'С ' + index.toString();
+            break;
+        default:
+            return index.toString();
+        }
+    }
+
+    get(designation) {
+        return this.#repository.get(designation);
+    }
+
+    getByName(name) {
+        for (let component of this.#repository.values()) {
+            if (component.name === name)
+                return component;
+        }
+
+        return undefined;
+    }
+
+    get roles() {
+        return this.#roles;
+    }
+
+    get repository() {
+        return new Map(this.#repository);
+    }
+
+    countComponents(componentClass) {
+        let result = 0;
+        
+        for (let component of this.#repository.values()) {
+            if (component instanceof componentClass) result++;
+        }
+
+        return result;
+    }
+
+    createComponent(componentClass, parent='', name='') {
+        let number = this.countComponents(componentClass);
+        let designation = ComponentManager.designate(componentClass, number);
+
+        let process = new componentClass(designation, name);
+        this.#repository.set(designation, process);
+        
+        return designation;
+    }
+
+    deleteComponent(designation) {
+        this.#repository.delete(designation);
+    }
+
+}
+
+class Validator {
+    #componentManager = null;
+    #ruleSet = null;
+
+    constructor(ruleSet) {
+	    this._ruleSet = ruleSet;
+	    this._componentManager = new ComponentManager();
+    }
+}
