@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+
+<html>
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>Исток | Диаграммы МИСО</title>
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <link rel="icon" type="image/x-icon" href="media/logo.png">
+    <link rel="icon" type="image/svg+xml" href="media/logo.svg">
+    <link rel="icon" type="image/png" sizes="16x16" href="media/favicon/16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="media/favicon/32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="media/favicon/48.png">
+  </head>
+
+  <body class="whole">
+
+    <div class="header">
+      <div class="menu-item menu-banner">
+        <img class="logo-icon"
+             src="media/logo.png"
+             alt="Logo">
+      </div>
+
+      <div class="menu-item menu-dropdown">
+        <button class="menu-dropdown-button">Файл</button>
+        <div class="menu-dropdown-container">
+          <p class="menu-dropdown-item" id="newFileBtn">Новый</p>
+          <p class="menu-dropdown-item" id="openFileBtn">Открыть</p>
+          <p class="menu-dropdown-item" id="saveFileBtn">Сохранить</p>
+        </div>
+      </div>
+
+      <div class="menu-item menu-dropdown">
+        <button class="menu-dropdown-button">Экспорт</button>
+        <div class="menu-dropdown-container">
+          <p class="menu-dropdown-item" id="exportPngBtn">Изображение</p>
+          <p class="menu-dropdown-item" id="exportProcessCSVBtn">Процессы</p>
+          <p class="menu-dropdown-item" id="exportDeviationCSVBtn">Отклонения</p>
+          <p class="menu-dropdown-item" id="exportRiskCSVBtn">Риск</p>
+          <p class="menu-dropdown-item" id="buildDiagramTree">Структура</p>
+        </div>
+      </div>
+
+      <div class="menu-item menu-dropdown">
+        <button class="menu-dropdown-button">Отчёт</button>
+        <div class="menu-dropdown-container">
+          <p class="menu-dropdown-item" id="processDiagramBtn">Процессы</p>
+          <p class="menu-dropdown-item" id="riskDiagramBtn">Риск</p>
+        </div>
+      </div>
+
+      <div class="menu-item menu-dropdown">
+        <button class="menu-dropdown-button">Помощь</button>
+        <div class="menu-dropdown-container">
+          <p class="menu-dropdown-item">Справка</p>
+          <p class="menu-dropdown-item">О программе</p>
+        </div>
+      </div>
+
+      <div class="menu-item menu-status-bar">
+        <p></p>
+      </div>
+
+    </div>
+
+    <div class="panel toolbar">
+      <button class="panel-button" disabled>
+        <img class="icon"
+             src="media/icons/png/composition.png"
+             alt="Композиция">
+      </button>
+
+      <button class="panel-button" disabled>
+        <img class="icon"
+             src="media/icons/png/decomposition.png"
+             alt="Декомпозиция">
+      </button>
+
+      <button class="panel-button"
+              id="cursorBtn">
+        <img class="icon"
+             src="media/icons/png/pointer.png"
+             alt="Курсор">
+      </button>
+
+      <button class="panel-button"
+              id="newProcessBtn">
+        <img class="icon"
+             src="media/icons/png/process.png"
+             alt="Процесс">
+      </button>
+
+      <button class="panel-button"
+              id="newElementBtn">
+        <img class="icon"
+             src="media/icons/png/element.png"
+             alt="Элемент">
+      </button>
+
+      <button class="panel-button"
+              id="newPropertyBtn" disabled>
+        <img class="icon"
+             src="media/icons/png/property.png"
+             alt="Свойство">
+      </button>
+
+      <button class="panel-button"
+              id="newIndependanceBtn" disabled>
+        <img class="icon"
+             src="media/icons/png/independance.png"
+             alt="Независимость">
+      </button>
+
+      <button class="panel-button"
+              id="newCompatibilityBtn" disabled>
+        <img class="icon"
+             src="media/icons/png/compatibility.png"
+             alt="Совместность">
+      </button>
+
+      <button class="panel-button"
+              id="newIncompatibilityBtn" disabled>
+        <img class="icon"
+             src="media/icons/png/incompatibility.png"
+             alt="Несовместность">
+      </button>
+    </div>
+
+    <div class="panel tree">
+    </div>
+
+    <div class="panel canvas-container">
+      <svg class="canvas">
+        <defs>
+          <marker
+            id="element-arrow-marker"
+            viewBox="0 0 10 10"
+            refX="10"
+            refY="5"
+            markerWidth="6"
+            markerHeight="6"
+            orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" />
+          </marker>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="panel palette">
+      <p class="palette-h1">
+        Свойства
+      </p>
+
+      <div class="palette-console">
+        <button class="panel-button palette-button"
+                id="palette-applyBtn">
+          Применить
+        </button>
+        <button class="panel-button palette-button"
+                id="palette-resetBtn">
+          Сбросить
+        </button>
+        <button class="panel-button palette-button"
+                id="palette-dropBtn">
+          Удалить
+        </button>
+      </div>
+
+      <div class="palette-notebook">
+        <input class="palette-tab-radio"
+               id="palette-diagramTab-radio"
+               name="palette-tab-radios"
+               type="radio"
+               value=""
+               >
+        <label class="palette-tab-label"
+               for="palette-diagramTab-radio">
+          Диаграмма
+        </label>
+
+        <input class="palette-tab-radio"
+               id="palette-accordanceTab-radio"
+               name="palette-tab-radios"
+               type="radio"
+               value=""
+               >
+        <label class="palette-tab-label"
+               for="palette-accordanceTab-radio">
+          Соответствие
+        </label>
+
+        <input class="palette-tab-radio"
+               id="palette-deviationTab-radio"
+               name="palette-tab-radios"
+               type="radio"
+               value=""
+               >
+        <label class="palette-tab-label"
+               for="palette-deviationTab-radio">
+          Отклонение
+        </label>
+      </div>
+
+      <div id="palette-diagramTab">
+        <div id="palette-diagramTab-general">
+          <p class="palette-h2">
+            Общие
+          </p>
+
+          <table class="palette-section">
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-diagramName">
+                  Название
+              </label></td>
+              <td>
+                <textarea class="palette-input"
+                          id="palette-diagramName"
+                          >
+                </textarea>
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-diagramAuthor">
+                  Автор
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-diagramAuthor"
+                       type="text">
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-diagramChanged">
+                  Дата изменения
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-diagramChanged"
+                       type="datetime-local">
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <div id="palette-accordanceTab">
+        <div id="palette-accordanceTab-general">
+          <p class="palette-h2">
+            Общие
+          </p>
+
+          <table class="palette-section">
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-accordanceName">
+                  Имя
+              </label></td>
+              <td>
+                <textarea class="palette-input"
+                          id="palette-accordanceName"
+                          >
+                </textarea>
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-accordanceNote">
+                  Заметка
+              </label></td>
+              <td>
+                <textarea class="palette-input"
+                          id="palette-accordanceNote"
+                          type="text">
+                </textarea>
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-accordanceActivity">
+                  Активная
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-accordanceActivity"
+                       type="checkbox">
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div id="palette-accordanceTab-process">
+          <p class="palette-h2">
+            Процесс
+          </p>
+
+          <table class="palette-section">
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-processObjective">
+                  Цель
+              </label></td>
+              <td>
+                <textarea class="palette-input"
+                          id="palette-processObjective"
+                          type="text">
+                </textarea>
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-processOwner">
+                  Владелец
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-processOwner"
+                       type="text">
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-processEnvironment">
+                  Среда
+              </label></td>
+              <td><input class="palette-input"
+                         id="palette-processEnvironment"
+                         type="text">
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-processPov">
+                  Точка зрения
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-processPov"
+                       type="text">
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div id="palette-accordanceTab-element">
+          <p class="palette-h2">
+            Элемент
+          </p>
+
+          <table class="palette-section">
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-elementOwner">
+                  Владелец
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-elementOwner"
+                       type="text">
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div id="palette-accordanceTab-property">
+          <p class="palette-h2">
+            Свойство
+          </p>
+
+          <table class="palette-section">
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-possibleValues">
+                  Возможные значения
+              </label></td>
+              <td><button class="link-button"
+                          id="palette-possibleValues">
+                  Изменить
+              </button></td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-referenceValue">
+                  Эталонное значение
+              </label></td>
+              <td><button class="link-button"
+                          id="palette-referenceValue">
+                  Отсутствует
+              </button></td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-actualValue">
+                  Фактическое значение
+              </label></td>
+              <td><button class="link-button"
+                          id="palette-actualValue">
+                  Отсутствует
+              </button></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <div id="palette-deviationTab">
+        <div id="palette-deviationTab-deviation">
+          <p class="palette-h2">
+            Отклонение
+          </p>
+
+          <table class="palette-section">
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-deviationName">
+                  Имя
+              </label></td>
+              <td>
+                <textarea class="palette-input"
+                          id="palette-deviationName"
+                          >
+                </textarea>
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-deviationNote">
+                  Заметка
+              </label></td>
+              <td>
+                <textarea class="palette-input"
+                          id="palette-deviationNote"
+                          >
+                </textarea>
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-deviationCause">
+                  Причина
+              </label></td>
+              <td><textarea class="palette-input"
+                            id="palette-deviationCause"
+                            >
+                </textarea>
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-deviationActivity">
+                  Активная
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-deviationActivity"
+                       type="checkbox">
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div id="palette-deviationTab-propertyDeviation">
+          <p class="palette-h2">
+            Отклонение свойства
+          </p>
+
+          <table class="palette-section">
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-propertyDeviationActualValue">
+                  Фактическое значение
+              </label></td>
+              <td>
+                <select class="palette-input"
+                        id="palette-propertyDeviationActualValue">
+                  <option value="noValue">Отсутствует</option>
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-propertyDeviationScale">
+                  Величина
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-propertyDeviationScale"
+                       type="number"
+                       step="0.1"
+                       >
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div id="palette-accordanceTab-risk">
+          <p class="palette-h2">
+            Риск
+          </p>
+
+          <table class="palette-section">
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-riskCharacter">
+                  Характер
+              </label></td>
+              <td>
+                <select class="palette-input"
+                        id="palette-riskCharacter">
+                  <option value="possibility">Возможность</option>
+                  <option value="treat">Угроза</option>
+                  <option value="noValue">Отсутствует</option>
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-riskLCStep">
+                  Этап ЖЦ
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-riskLCStep"
+                       type="text">
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-riskOutrunning">
+                  Опережение, д
+              </label></td>
+              <td><input class="palette-input"
+                         id="palette-riskOutrunning"
+                         type="number"
+                         step="0.5"
+                         >
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-riskProfit">
+                  Прибыль, ₽
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-riskProfit"
+                       type="number"
+                       step="0.5"
+                       >
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-riskScore">
+                  Оценка
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-riskScore"
+                       type="number"
+                       step="0.01"
+                       >
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-riskProbability">
+                  Вероятность, %
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-riskProbability"
+                       type="number"
+                       step="0.01"
+                       min="0"
+                       max="100"
+                       >
+              </td>
+            </tr>
+            <tr>
+              <td><label class="palette-input-label"
+                         for="palette-riskError">
+                  Ошибка, %
+              </label></td>
+              <td>
+                <input class="palette-input"
+                       id="palette-riskError"
+                       type="number"
+                       step="0.01"
+                       min="0"
+                       max="100"
+                       >
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script src="scenic/style/element.js"></script>
+
+    <script src="defaults/defaults.js"></script>
+    <script src="defaults/styles.js"></script>
+
+    <script src="result/result.js"></script>
+
+    <script src="coeden/coeden.js"></script>
+
+    <script src="scenic/style/style.js"></script>
+    <script src="scenic/spatia/spatia.js"></script>
+    <script src="scenic/geometry/primitive.js"></script>
+    <script src="scenic/geometry/group.js"></script>
+    <script src="scenic/set/set.js"></script>
+    <script src="diagram/diagram.js"></script>
+
+    <script src="export.js"></script>
+    <script src="app.js"></script>
+
+  </body>
+
+</html>

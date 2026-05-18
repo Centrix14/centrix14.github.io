@@ -1,0 +1,57 @@
+/* source: https://xhtml.ru/2022/html/tree-views/ */
+
+html {
+    background-color: white;
+
+    font-family: sans;
+}
+
+.credentials-table {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+
+.credentials-table td {
+    border: 1px solid black;
+}
+
+.credentials-table-data {
+    margin: 4;
+}
+
+.tree {
+    --spacing : 1.5rem;
+    --line-height: 1.5;
+    --radius  : 10px;
+}
+
+.tree li {
+    display: block;
+    position: relative;
+    line-height: var(--line-height);
+
+    padding-left: calc(2 * var(--spacing) - var(--radius) - 2px);
+}
+
+.tree ul {
+    margin-left: calc(var(--radius) - var(--spacing));
+    padding-left: 0;
+}
+
+.tree .accordance-badge,
+.tree .deviation-badge {
+    color: darkblue;
+    outline: solid darkblue 1px;
+
+    font-size: small;
+
+    user-select: none;
+    margin-right: 0.5%;
+}
+
+.tree .property-label {
+    color: dimgray;
+
+    user-select: none;
+    margin-right: 1%;
+}
