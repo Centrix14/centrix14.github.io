@@ -30,7 +30,7 @@
       <div class="menu-item menu-dropdown">
         <button class="menu-dropdown-button">Файл</button>
         <div class="menu-dropdown-container">
-          <p class="menu-dropdown-item" id="newFileBtn">Новый</p>
+          <p class="menu-dropdown-item" id="newFileBtn">Создать</p>
           <p class="menu-dropdown-item" id="openFileBtn">Открыть</p>
           <p class="menu-dropdown-item" id="saveFileBtn">Сохранить</p>
         </div>
@@ -40,26 +40,34 @@
         <button class="menu-dropdown-button">Экспорт</button>
         <div class="menu-dropdown-container">
           <p class="menu-dropdown-item" id="exportPngBtn">Изображение</p>
-          <p class="menu-dropdown-item" id="exportProcessCSVBtn">Процессы</p>
-          <p class="menu-dropdown-item" id="exportDeviationCSVBtn">Отклонения</p>
-          <p class="menu-dropdown-item" id="exportRiskCSVBtn">Риск</p>
-          <p class="menu-dropdown-item" id="buildDiagramTree">Структура</p>
+          <p class="menu-dropdown-item" id="exportAccordanceBtn">Соответствие</p>
+          <p class="menu-dropdown-item" id="exportProcessBtn">Процесс</p>
+          <p class="menu-dropdown-item" id="exportElementBtn">Элемент</p>
+          <p class="menu-dropdown-item" id="exportDeviationBtn">Отклонение</p>
+          <p class="menu-dropdown-item" id="exportRiskBtn">Риск</p>
+          <p class="menu-dropdown-item" id="exportStructureBtn">Структура</p>
         </div>
       </div>
 
       <div class="menu-item menu-dropdown">
         <button class="menu-dropdown-button">Отчёт</button>
         <div class="menu-dropdown-container">
-          <p class="menu-dropdown-item" id="processDiagramBtn">Процессы</p>
-          <p class="menu-dropdown-item" id="riskDiagramBtn">Риск</p>
+          <p class="menu-dropdown-item" id="processRegistryBtn">Реестр процессов</p>
+          <p class="menu-dropdown-item" id="riskRegistryBtn">Реестр риска</p>
         </div>
       </div>
 
       <div class="menu-item menu-dropdown">
         <button class="menu-dropdown-button">Помощь</button>
         <div class="menu-dropdown-container">
-          <p class="menu-dropdown-item">Справка</p>
-          <p class="menu-dropdown-item">О программе</p>
+
+          <p class="menu-dropdown-item">
+            <a href="help/index.html" target="_blank">
+              Справка
+            </a>
+          </p>
+
+          <p class="menu-dropdown-item" id="openAboutDialogBtn">О программе</p>
         </div>
       </div>
 
@@ -137,6 +145,25 @@
 
     <div class="panel canvas-container">
       <svg class="canvas">
+        <style>
+          #name, #designation {
+              user-select: none;
+          }
+
+          .htmltext-container {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+
+              height: 100%;
+              overflow: auto;
+          }
+
+          .htmltext-p {
+              text-align: center;
+          }
+        </style>
+
         <defs>
           <marker
             id="element-arrow-marker"
@@ -222,8 +249,7 @@
               <td>
                 <textarea class="palette-input"
                           id="palette-diagramName"
-                          >
-                </textarea>
+                          ></textarea>
               </td>
             </tr>
             <tr>
@@ -267,8 +293,7 @@
               <td>
                 <textarea class="palette-input"
                           id="palette-accordanceName"
-                          >
-                </textarea>
+                          ></textarea>
               </td>
             </tr>
             <tr>
@@ -279,8 +304,7 @@
               <td>
                 <textarea class="palette-input"
                           id="palette-accordanceNote"
-                          type="text">
-                </textarea>
+                          ></textarea>
               </td>
             </tr>
             <tr>
@@ -311,8 +335,7 @@
               <td>
                 <textarea class="palette-input"
                           id="palette-processObjective"
-                          type="text">
-                </textarea>
+                          ></textarea>
               </td>
             </tr>
             <tr>
@@ -425,8 +448,7 @@
               <td>
                 <textarea class="palette-input"
                           id="palette-deviationName"
-                          >
-                </textarea>
+                          ></textarea>
               </td>
             </tr>
             <tr>
@@ -437,8 +459,7 @@
               <td>
                 <textarea class="palette-input"
                           id="palette-deviationNote"
-                          >
-                </textarea>
+                          ></textarea>
               </td>
             </tr>
             <tr>
@@ -448,8 +469,7 @@
               </label></td>
               <td><textarea class="palette-input"
                             id="palette-deviationCause"
-                            >
-                </textarea>
+                            ></textarea>
               </td>
             </tr>
             <tr>
@@ -603,23 +623,208 @@
       </div>
     </div>
 
+    <dialog id="about-dialog">
+      <div class="dialog-header">
+        <p class="dialog-title">О программе</p>
+      </div>
+
+      <div class="dialog-body">
+        <div class="about-dialog-pane" id="about-dialog-logo">
+          <img src="media/favicon/512.png" alt="Логотип Исток">
+        </div>
+
+        <div class="about-dialog-pane" id="about-dialog-info">
+          <table>
+            <tr>
+              <td>Программа</td>
+              <td>Исток</td>
+            </tr>
+
+            <tr>
+              <td>Версия</td>
+              <td>1.3</td>
+            </tr>
+
+            <tr>
+              <td>Период</td>
+              <td>Май 2026</td>
+            </tr>
+
+            <tr>
+              <td>Разработчик</td>
+              <td>Zv0 (Звягин А. С.)</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button class="dialog-action-btn" id="closeAboutDialogBtn">Ок</button>
+      </div>
+    </dialog>
+
+    <dialog id="element-export-dialog">
+      <div class="dialog-header">
+        <p class="dialog-title">Выгрузка элементов</p>
+      </div>
+
+      <div class="dialog-body">
+        <table class="dialog-body-table">
+          <tr>
+            <td><label for="export-inputs-checkbox">Входы</label></td>
+            <td><input class="dialog-input"
+                   id="export-inputs-checkbox"
+                   type="checkbox"></td>
+          </tr>
+
+          <tr>
+            <td><label for="export-outputs-checkbox">Выходы</label></td>
+            <td><input class="dialog-input"
+                   id="export-outputs-checkbox"
+                   type="checkbox"></td>
+          </tr>
+
+          <tr>
+            <td><label for="export-doers-checkbox">Исполнители</label></td>
+            <td><input class="dialog-input"
+                   id="export-doers-checkbox"
+                   type="checkbox"></td>
+          </tr>
+
+          <tr>
+            <td><label for="export-means-checkbox">Средства</label></td>
+            <td><input class="dialog-input"
+                   id="export-means-checkbox"
+                   type="checkbox"></td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="dialog-footer">
+        <button class="dialog-close-btn" id="closeElementExportDialogBtn">
+          Отмена
+        </button>
+
+        <button class="dialog-action-btn" id="makeElementExportBtn">
+          Сформировать
+        </button>
+      </div>
+    </dialog>
+
+    <dialog id="risk-registry-dialog">
+      <div class="dialog-header">
+        <p class="dialog-title">Реестр риска</p>
+      </div>
+
+      <div class="dialog-body">
+        <table class="dialog-body-table">
+          <tr>
+            <td>Текущий шаблон:</td>
+            <td id="risk-registry-current-template"></td>
+          </tr>
+
+          <tr>
+            <td>Новый шаблон:</td>
+            <td>
+              <input id="risk-registry-new-template"
+                     type="file"
+                     multiple="false">
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="dialog-footer">
+        <button class="dialog-close-btn" id="closeRiskRegistryDialogBtn">
+          Отмена
+        </button>
+
+        <button class="dialog-action-btn" id="createRiskRegistryBtn">
+          Сформировать
+        </button>
+      </div>
+    </dialog>
+
+    <dialog id="process-registry-dialog">
+      <div class="dialog-header">
+        <p class="dialog-title">Реестр процессов</p>
+      </div>
+
+      <div class="dialog-body">
+        <table class="dialog-body-table">
+          <tr>
+            <td>Текущий шаблон:</td>
+            <td id="process-registry-current-template"></td>
+          </tr>
+
+          <tr>
+            <td>Новый шаблон:</td>
+            <td>
+              <input id="process-registry-new-template"
+                     type="file"
+                     multiple="false">
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="dialog-footer">
+        <button class="dialog-close-btn" id="closeProcessRegistryDialogBtn">
+          Отмена
+        </button>
+
+        <button class="dialog-action-btn" id="createProcessRegistryBtn">
+          Сформировать
+        </button>
+      </div>
+    </dialog>
+
+    <script type="module">
+      import {
+          createReport,
+          CommandExecutionError
+      } from 'https://unpkg.com/docx-templates/lib/browser.js';
+
+      window.createReport = createReport;
+      window.CommandExecutionError = CommandExecutionError;
+    </script>
+
     <script src="scenic/style/element.js"></script>
+    <script src="scenic/style/style.js"></script>
 
     <script src="defaults/defaults.js"></script>
     <script src="defaults/styles.js"></script>
 
     <script src="result/result.js"></script>
 
+    <script src="util/file.js"></script>
+    <script src="util/event.js"></script>
+    <script src="util/value.js"></script>
+    <script src="util/dom.js"></script>
+    <script src="util/csv.js"></script>
+    <script src="util/mime.js"></script>
+    <script src="util/date.js"></script>
+
     <script src="coeden/coeden.js"></script>
 
-    <script src="scenic/style/style.js"></script>
     <script src="scenic/spatia/spatia.js"></script>
     <script src="scenic/geometry/primitive.js"></script>
     <script src="scenic/geometry/group.js"></script>
     <script src="scenic/set/set.js"></script>
     <script src="diagram/diagram.js"></script>
 
-    <script src="export.js"></script>
+    <script src="export/CSVExport.js"></script>
+    <script src="export/PNGExport.js"></script>
+    <script src="export/HTMLExport.js"></script>
+
+    <script src="report/ProcessRegistry.js"></script>
+    <script src="report/RiskRegistry.js"></script>
+
+    <script src="dialog/About.js"></script>
+    <script src="dialog/ElementExport.js"></script>
+    <script src="dialog/ProcessRegistry.js"></script>
+    <script src="dialog/RiskRegistry.js"></script>
+
     <script src="app.js"></script>
 
   </body>

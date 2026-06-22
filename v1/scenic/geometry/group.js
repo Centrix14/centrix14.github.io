@@ -40,7 +40,160 @@ class Group {
     }
 }
 
-class NaiveVerticalStepline extends Group {
+class AngleLine extends Group {
+    static Rib = {
+        Horizontal: 'horizontal',
+        Vertical: 'vertical',
+    }
+
+    static Variant = {
+        X: 'x',
+        Y: 'y',
+    }
+
+    static toJSON(obj) {
+        return {
+            start: Point.toJSON(obj._start),
+            end: Point.toJSON(obj._end),
+            variant: this._variant,
+        };
+    }
+
+    static applyJSON(json, obj) {
+        Point.applyJSON(json.start, obj._start);
+        Point.applyJSON(json.end, obj._end);
+        this._variant = json.variant;
+
+        obj._calcRibs();
+    }
+
+    static fromJSON(json) {
+        const obj = new AngleLine();
+        AngleLine.applyJSON(json, obj);
+        return obj;
+    }
+
+    constructor(start, end, variant) {
+        super();
+
+        this._store = new Map([
+            [AngleLine.Rib.Horizontal, new StraightLine()],
+            [AngleLine.Rib.Vertical, new StraightLine()],
+        ]);
+
+        this._start = start ?? new Point(0,0);
+        this._end = end ?? new Point(0,0);
+        this._variant = variant ?? AngleLine.Variant.Y;
+
+        this._calcRibs();
+    }
+
+    _calcRibs() {
+        const horizontal = this._store.get(AngleLine.Rib.Horizontal),
+              vertical = this._store.get(AngleLine.Rib.Vertical);
+
+        switch (this._variant) {
+        case AngleLine.Variant.X:
+            horizontal.start = this._start;
+            horizontal.end = this.center;
+
+            vertical.start = this.center;
+            vertical.end = this._end;
+            break;
+        case AngleLine.Variant.Y:
+            vertical.start = this._start
+            vertical.end = this.center;
+
+            horizontal.start = this.center;
+            horizontal.end = this._end;
+            break;
+        }
+    }
+
+    get start() { return this._start; }
+    get end() { return this._end; }
+
+    get center() {
+        const [x1, y1] = [this._start.x, this._start.y],
+              [x2, y2] = [this._end.x, this._end.y];
+
+        switch (this._variant) {
+        case AngleLine.Variant.X:
+            return new Point(
+                x2, y1
+            );
+        case AngleLine.Variant.Y:
+            return new Point(
+                x1, y2
+            );
+        }
+    }
+
+    add() { return new Result(); }
+    drop() { return new Result(); }
+
+    publish() {
+        const horizontal = this._store.get(AngleLine.Rib.Horizontal),
+              vertical = this._store.get(AngleLine.Rib.Vertical);
+
+        let points;
+        switch (this._variant) {
+        case AngleLine.Variant.X:
+            points = `${horizontal.start.x},${horizontal.start.y} `
+                + `${horizontal.end.x},${horizontal.end.y} `
+                + `${vertical.end.x},${vertical.end.y}`;
+            break;
+        case AngleLine.Variant.Y:
+            points = `${vertical.start.x},${vertical.start.y} `
+                + `${vertical.end.x},${vertical.end.y} `
+                + `${horizontal.end.x},${horizontal.end.y}`;
+            break;
+        }
+
+        return {points};
+    }
+
+    isTouching(cursor, spatia) {
+        const horizontal = this._store.get(AngleLine.Rib.Horizontal),
+              vertical = this._store.get(AngleLine.Rib.Vertical);
+
+        return horizontal.isTouching(cursor, spatia)
+            || vertical.isTouching(cursor, spatia);
+    }
+
+    shift(dX, dY, flags) {
+        const f = flags ?? {auto: {start: true, end: true}, cursor: null};
+
+        if (f.auto) {
+            if (f.auto.start)
+                this._start.shift(dX, dY);
+            if (f.auto.end)
+                this._end.shift(dX, dY);
+        }
+        else if (f.cursor) {
+            const horizontal = this._store.get(AngleLine.Rib.Horizontal),
+                  vertical = this._store.get(AngleLine.Rib.Vertical);
+
+            const cursor = f.cursor;
+            if (horizontal.isTouching(cursor.point, cursor.spatia)) {
+                if (this._variant === AngleLine.Variant.X)
+                    this._start.shift(0, dY);
+                if (this._variant === AngleLine.Variant.Y)
+                    this._end.shift(0, dY);
+            }
+            else if (vertical.isTouching(cursor.point, cursor.spatia)) {
+                if (this._variant === AngleLine.Variant.X)
+                    this._end.shift(dX, 0);
+                if (this._variant === AngleLine.Variant.Y)
+                    this._start.shift(dX, 0);
+            }
+        }
+
+        this._calcRibs();
+    }
+}
+
+class HorizontalStepline extends Group {
     static Rib = {
         Up: 'up',
         Middle: 'middle',
@@ -51,18 +204,21 @@ class NaiveVerticalStepline extends Group {
         return {
             start: Point.toJSON(obj._start),
             end: Point.toJSON(obj._end),
+            offset: obj._offset,
         };
     }
 
     static applyJSON(json, obj) {
         Point.applyJSON(json.start, obj._start);
         Point.applyJSON(json.end, obj._end);
+        obj._offset = json.offset;
+
         obj._calcRibs();
     }
 
     static fromJSON(json) {
-        const obj = new NaiveVerticalStepline();
-        NaiveVerticalStepline.applyJSON(json, obj);
+        const obj = new HorizontalStepline();
+        HorizontalStepline.applyJSON(json, obj);
         return obj;
     }
 
@@ -70,19 +226,20 @@ class NaiveVerticalStepline extends Group {
         super();
 
         this._store = new Map([
-            [NaiveVerticalStepline.Rib.Up, new StraightLine()],
-            [NaiveVerticalStepline.Rib.Middle, new StraightLine()],
-            [NaiveVerticalStepline.Rib.Down, new StraightLine()]
+            [HorizontalStepline.Rib.Up, new StraightLine()],
+            [HorizontalStepline.Rib.Middle, new StraightLine()],
+            [HorizontalStepline.Rib.Down, new StraightLine()]
         ]);
 
         this._start = start ?? new Point(0,0);
         this._end = end ?? new Point(0,0);
+        this._offset = 0;
 
         this._calcRibs();
     }
 
     _calcRibs() {
-        const Rib = NaiveVerticalStepline.Rib;
+        const Rib = HorizontalStepline.Rib;
 
         const up = this._store.get(Rib.Up),
               middle = this._store.get(Rib.Middle),
@@ -90,7 +247,7 @@ class NaiveVerticalStepline extends Group {
 
         const [x1, y1] = [this.start.x, this.start.y],
               [x2, y2] = [this.end.x, this.end.y];
-        const dx = x2 - x1, dy = y2 - y1, l = dx / 2;
+        const dx = x2 - x1, dy = y2 - y1, l = dx / 2 + this._offset;
 
         [up.start.x, up.start.y] = [x1, y1];
         [up.end.x, up.end.y] = [x1 + l, y1];
@@ -105,12 +262,12 @@ class NaiveVerticalStepline extends Group {
     get start() { return this._start; }
     get end() { return this._end; }
 
-    getCenter() {
+    get center() {
         const [x1, y1] = [this._start.x, this._start.y],
               [x2, y2] = [this._end.x, this._end.y];
 
         return new Point(
-            x1 + (x2 - x1) / 2,
+            x1 + (x2 - x1) / 2 + this._offset,
             y1 + (y2 - y1) / 2
         );
     }
@@ -119,7 +276,7 @@ class NaiveVerticalStepline extends Group {
     drop() { return new Result(); }
 
     publish() {
-        const Rib = NaiveVerticalStepline.Rib;
+        const Rib = HorizontalStepline.Rib;
 
         const up = this._store.get(Rib.Up),
               middle = this._store.get(Rib.Middle),
@@ -134,7 +291,7 @@ class NaiveVerticalStepline extends Group {
     }
 
     isTouching(cursor, spatia) {
-        const Rib = NaiveVerticalStepline.Rib;
+        const Rib = HorizontalStepline.Rib;
 
         const up = this._store.get(Rib.Up),
               middle = this._store.get(Rib.Middle),
@@ -146,12 +303,486 @@ class NaiveVerticalStepline extends Group {
     }
 
     shift(dX, dY, flags) {
-        const f = flags ?? {start: true, end: true};
+        const f = flags ?? {auto: {start: true, end: true}, cursor: null};
 
-        if (f.start)
-            this._start.shift(dX, dY);
-        if (f.end)
-            this._end.shift(dX, dY);
+        if (f.auto) {
+            if (f.auto.start)
+                this._start.shift(dX, dY);
+            if (f.auto.end)
+                this._end.shift(dX, dY);
+        }
+        else if (f.cursor) {
+            const Rib = HorizontalStepline.Rib;
+            const up = this._store.get(Rib.Up),
+                  middle = this._store.get(Rib.Middle),
+                  down = this._store.get(Rib.Down);
+
+            const cursor = f.cursor;
+            if (up.isTouching(cursor.point, cursor.spatia)) {
+                this._start.shift(0, dY);
+            }
+            else if (middle.isTouching(cursor.point, cursor.spatia)) {
+                this._offset += dX;
+            }
+            else if (down.isTouching(cursor.point, cursor.spatia)) {
+                this._end.shift(0, dY);
+            }
+        }
+
+        this._calcRibs();
+    }
+}
+
+class VerticalStepline extends Group {
+    static Rib = {
+        Left: 'left',
+        Middle: 'middle',
+        Right: 'right',
+    }
+
+    static toJSON(obj) {
+        return {
+            start: Point.toJSON(obj._start),
+            end: Point.toJSON(obj._end),
+            offset: obj._offset,
+        };
+    }
+
+    static applyJSON(json, obj) {
+        Point.applyJSON(json.start, obj._start);
+        Point.applyJSON(json.end, obj._end);
+        obj._offset = json.offset;
+
+        obj._calcRibs();
+    }
+
+    static fromJSON(json) {
+        const obj = new VerticalStepline();
+        VerticalStepline.applyJSON(json, obj);
+        return obj;
+    }
+
+    constructor(start, end) {
+        super();
+
+        this._store = new Map([
+            [VerticalStepline.Rib.Left, new StraightLine()],
+            [VerticalStepline.Rib.Middle, new StraightLine()],
+            [VerticalStepline.Rib.Right, new StraightLine()]
+        ]);
+
+        this._start = start ?? new Point(0,0);
+        this._end = end ?? new Point(0,0);
+        this._offset = 0;
+
+        this._calcRibs();
+    }
+
+    _calcRibs() {
+        const Rib = VerticalStepline.Rib;
+
+        const left = this._store.get(Rib.Left),
+              middle = this._store.get(Rib.Middle),
+              right = this._store.get(Rib.Right);
+
+        const [x1, y1] = [this.start.x, this.start.y],
+              [x2, y2] = [this.end.x, this.end.y];
+        const dx = x2 - x1, dy = y2 - y1, l = dy / 2 + this._offset;
+
+        [left.start.x, left.start.y] = [x1, y1];
+        [left.end.x, left.end.y] = [x1, y1 + l];
+
+        [middle.start.x, middle.start.y] = [x1, y1 + l];
+        [middle.end.x, middle.end.y] = [x1 + dx, y1 + l];
+
+        [right.start.x, right.start.y] = [x1 + dx, y1 + l];
+        [right.end.x, right.end.y] = [x2, y2];
+    }
+
+    get start() { return this._start; }
+    get end() { return this._end; }
+
+    get center() {
+        const [x1, y1] = [this._start.x, this._start.y],
+              [x2, y2] = [this._end.x, this._end.y];
+
+        return new Point(
+            x1 + (x2 - x1) / 2,
+            y1 + (y2 - y1) / 2 + this._offset
+        );
+    }
+
+    add() { return new Result(); }
+    drop() { return new Result(); }
+
+    publish() {
+        const Rib = VerticalStepline.Rib;
+
+        const left = this._store.get(Rib.Left),
+              middle = this._store.get(Rib.Middle),
+              right = this._store.get(Rib.Right);
+
+        return {
+            points: `${left.start.x},${left.start.y} `
+                + `${middle.start.x},${middle.start.y} `
+                + `${right.start.x},${right.start.y} `
+                + `${right.end.x},${right.end.y}`
+        };
+    }
+
+    isTouching(cursor, spatia) {
+        const Rib = VerticalStepline.Rib;
+
+        const left = this._store.get(Rib.Left),
+              middle = this._store.get(Rib.Middle),
+              right = this._store.get(Rib.Right);
+
+        return left.isTouching(cursor, spatia)
+            || middle.isTouching(cursor, spatia)
+            || right.isTouching(cursor, spatia);
+    }
+
+    shift(dX, dY, flags) {
+        const f = flags ?? {auto: {start: true, end: true}, cursor: null};
+
+        if (f.auto) {
+            if (f.auto.start)
+                this._start.shift(dX, dY);
+            if (f.auto.end)
+                this._end.shift(dX, dY);
+        }
+        else if (f.cursor) {
+            const cursor = f.cursor;
+
+            const Rib = VerticalStepline.Rib;
+            const left = this._store.get(Rib.Left),
+                  middle = this._store.get(Rib.Middle),
+                  right = this._store.get(Rib.Right);
+
+            if (left.isTouching(cursor.point, cursor.spatia))
+                this._start.shift(dX, 0);
+            else if (middle.isTouching(cursor.point, cursor.spatia))
+                this._offset += dY;
+            else if (right.isTouching(cursor.point, cursor.spatia))
+                this._end.shift(dX, 0);
+        }
+
+        this._calcRibs();
+    }
+}
+
+class BLine extends Group {
+    static Rib = {
+        VerticalLeft: 'vl',
+        VerticalRight: 'vr',
+        HorizontalUp: 'hu',
+        HorizontalDown: 'hd',
+    }
+
+    static toJSON(obj) {
+        return {
+            start: Point.toJSON(obj._start),
+            end: Point.toJSON(obj._end),
+            offset: Point.toJSON(obj._offset),
+        };
+    }
+
+    static applyJSON(json, obj) {
+        Point.applyJSON(json.start, obj._start);
+        Point.applyJSON(json.end, obj._end);
+        Point.applyJSON(json.offset, obj._offset);
+
+        obj._calcRibs();
+    }
+
+    static fromJSON(json) {
+        const obj = new BLine();
+        BLine.applyJSON(json, obj);
+        return obj;
+    }
+
+    constructor(start, end) {
+        super();
+
+        this._store = new Map([
+            [BLine.Rib.HorizontalUp, new StraightLine()],
+            [BLine.Rib.VerticalRight, new StraightLine()],
+            [BLine.Rib.HorizontalDown, new StraightLine()],
+            [BLine.Rib.VerticalLeft, new StraightLine()],
+        ]);
+
+        this._start = start ?? new Point(0,0);
+        this._end = end ?? new Point(0,0);
+        this._offset = new Point(0,0);
+
+        this._calcRibs();
+    }
+
+    _calcRibs() {
+        const Rib = BLine.Rib;
+
+        const hu = this._store.get(Rib.HorizontalUp),
+              vr = this._store.get(Rib.VerticalRight),
+              hd = this._store.get(Rib.HorizontalDown),
+              vl = this._store.get(Rib.VerticalLeft);
+
+        const [x1, y1] = [this.start.x, this.start.y],
+              [x2, y2] = [this.end.x, this.end.y],
+              [xc, yc] = [this.start.x + 20 + this._offset.x,
+                          this.start.y + 50 + this._offset.y];
+
+        hu.start = this.start;
+        [hu.end.x, hu.end.y] = [xc, y1];
+
+        [vr.start.x, vr.start.y] = [xc, y1];
+        [vr.end.x, vr.end.y] = [xc, yc];
+
+        [hd.start.x, hd.start.y] = [xc, yc];
+        [hd.end.x, hd.end.y] = [x2, yc];
+
+        [vl.start.x, vl.start.y] = [x2, yc];
+        vl.end = this.end;
+    }
+
+    get start() { return this._start; }
+    get end() { return this._end; }
+    get corner() { return this._corner; }
+
+    get center() {
+        const hd = this._store.get(BLine.Rib.HorizontalDown);
+        const d = hd.start.sub(hd.end);
+
+        return new Point(
+            hd.end.x + d.x / 2,
+            hd.start.y,
+        );
+    }
+
+    publish() {
+        const Rib = BLine.Rib;
+
+        const hu = this._store.get(Rib.HorizontalUp),
+              vr = this._store.get(Rib.VerticalRight),
+              hd = this._store.get(Rib.HorizontalDown),
+              vl = this._store.get(Rib.VerticalLeft);
+
+        return {
+            points: `${hu.start.x},${hu.start.y} `
+                + `${vr.start.x},${vr.start.y} `
+                + `${hd.start.x},${hd.start.y} `
+                + `${vl.start.x},${vl.start.y} `
+                + `${vl.end.x},${vl.end.y}`
+        };
+    }
+
+    isTouching(cursor, spatia) {
+        const Rib = BLine.Rib;
+
+        const hu = this._store.get(Rib.HorizontalUp),
+              vr = this._store.get(Rib.VerticalRight),
+              hd = this._store.get(Rib.HorizontalDown),
+              vl = this._store.get(Rib.VerticalLeft);
+
+        return hu.isTouching(cursor, spatia)
+            || vr.isTouching(cursor, spatia)
+            || hd.isTouching(cursor, spatia)
+            || vl.isTouching(cursor, spatia);
+    }
+
+    shift(dX, dY, flags) {
+        const f = flags ?? {auto: {start: true, end: true}, cursor: null};
+
+        if (f.auto) {
+            if (f.auto.start)
+                this._start.shift(dX, dY);
+            if (f.auto.end)
+                this._end.shift(dX, dY);
+        }
+        else if (f.cursor) {
+            const cursor = f.cursor;
+
+            const Rib = BLine.Rib;
+            const hu = this._store.get(Rib.HorizontalUp),
+                  vr = this._store.get(Rib.VerticalRight),
+                  hd = this._store.get(Rib.HorizontalDown),
+                  vl = this._store.get(Rib.VerticalLeft);
+
+            if (hu.isTouching(cursor.point, cursor.spatia))
+                this._start.shift(0, dY);
+            else if (vr.isTouching(cursor.point, cursor.spatia))
+                this._offset.shift(dX, 0);
+            else if (hd.isTouching(cursor.point, cursor.spatia))
+                this._offset.shift(0, dY);
+            else if (vl.isTouching(cursor.point, cursor.spatia))
+                this._end.shift(dX, 0);
+        }
+
+        this._calcRibs();
+    }
+}
+
+class ULine extends Group {
+    static Rib = {
+        RightHorizontalUp: 'rhu',
+        VerticalRight: 'vr',
+        HorizontalDown: 'hd',
+        VerticalLeft: 'vl',
+        LeftHorizontalUp: 'lhu',
+    }
+
+    static toJSON(obj) {
+        return {
+            start: Point.toJSON(obj._start),
+            end: Point.toJSON(obj._end),
+            rightOffset: Point.toJSON(obj._rightOffset),
+            leftOffset: obj._leftOffset,
+        };
+    }
+
+    static applyJSON(json, obj) {
+        Point.applyJSON(json.start, obj._start);
+        Point.applyJSON(json.end, obj._end);
+        Point.applyJSON(json.rightOffset, obj._rightOffset);
+        obj._leftOffset = json.leftOffset;
+
+        obj._calcRibs();
+    }
+
+    static fromJSON(json) {
+        const obj = new ULine();
+        ULine.applyJSON(json, obj);
+        return obj;
+    }
+
+    constructor(start, end) {
+        super();
+
+        this._store = new Map([
+            [ULine.Rib.RightHorizontalUp, new StraightLine()],
+            [ULine.Rib.VerticalRight, new StraightLine()],
+            [ULine.Rib.HorizontalDown, new StraightLine()],
+            [ULine.Rib.VerticalLeft, new StraightLine()],
+            [ULine.Rib.LeftHorizontalUp, new StraightLine()],
+        ]);
+
+        this._start = start ?? new Point(0,0);
+        this._end = end ?? new Point(0,0);
+        this._rightOffset = new Point(0,0);
+        this._leftOffset = 0;
+
+        this._calcRibs();
+    }
+
+    _calcRibs() {
+        const Rib = ULine.Rib;
+
+        const rhu = this._store.get(Rib.RightHorizontalUp),
+              vr = this._store.get(Rib.VerticalRight),
+              hd = this._store.get(Rib.HorizontalDown),
+              vl = this._store.get(Rib.VerticalLeft),
+              lhu = this._store.get(Rib.LeftHorizontalUp);
+
+        const [x1, y1] = [this.start.x, this.start.y],
+              [x2, y2] = [this.end.x, this.end.y],
+              [xrc, yrc] = [this.start.x + 20 + this._rightOffset.x,
+                            this.start.y + 50 + this._rightOffset.y],
+              [xlc, ylc] = [this.end.x - 20 + this._leftOffset, yrc];
+
+        rhu.start = this.start;
+        [rhu.end.x, rhu.end.y] = [xrc, y1];
+
+        [vr.start.x, vr.start.y] = [xrc, y1];
+        [vr.end.x, vr.end.y] = [xrc, yrc];
+
+        [hd.start.x, hd.start.y] = [xrc, yrc];
+        [hd.end.x, hd.end.y] = [xlc, ylc];
+
+        [vl.start.x, vl.start.y] = [xlc, ylc];
+        [vl.end.x, vl.end.y] = [xlc, y2];
+
+        [lhu.start.x, lhu.start.y] = [xlc, y2];
+        lhu.end = this.end;
+    }
+
+    get start() { return this._start; }
+    get end() { return this._end; }
+
+    get center() {
+        const hd = this._store.get(ULine.Rib.HorizontalDown);
+        const d = hd.start.sub(hd.end);
+
+        return new Point(
+            hd.end.x + d.x / 2,
+            hd.start.y,
+        );
+    }
+
+    publish() {
+        const Rib = ULine.Rib;
+
+        const rhu = this._store.get(Rib.RightHorizontalUp),
+              vr = this._store.get(Rib.VerticalRight),
+              hd = this._store.get(Rib.HorizontalDown),
+              vl = this._store.get(Rib.VerticalLeft),
+              lhu = this._store.get(Rib.LeftHorizontalUp);
+
+        return {
+            points: `${rhu.start.x},${rhu.start.y} `
+                + `${vr.start.x},${vr.start.y} `
+                + `${hd.start.x},${hd.start.y} `
+                + `${vl.start.x},${vl.start.y} `
+                + `${lhu.start.x},${lhu.start.y} `
+                + `${lhu.end.x},${lhu.end.y}`
+        };
+    }
+
+    isTouching(cursor, spatia) {
+        const Rib = ULine.Rib;
+
+        const rhu = this._store.get(Rib.RightHorizontalUp),
+              vr = this._store.get(Rib.VerticalRight),
+              hd = this._store.get(Rib.HorizontalDown),
+              vl = this._store.get(Rib.VerticalLeft),
+              lhu = this._store.get(Rib.LeftHorizontalUp);
+
+        return rhu.isTouching(cursor, spatia)
+            || vr.isTouching(cursor, spatia)
+            || hd.isTouching(cursor, spatia)
+            || vl.isTouching(cursor, spatia)
+            || lhu.isTouching(cursor, spatia);
+    }
+
+    shift(dX, dY, flags) {
+        const f = flags ?? {auto: {start: true, end: true}, cursor: null};
+
+        if (f.auto) {
+            if (f.auto.start)
+                this._start.shift(dX, dY);
+            if (f.auto.end)
+                this._end.shift(dX, dY);
+        }
+        else if (f.cursor) {
+            const cursor = f.cursor;
+
+            const Rib = ULine.Rib;
+            const rhu = this._store.get(Rib.RightHorizontalUp),
+                  vr = this._store.get(Rib.VerticalRight),
+                  hd = this._store.get(Rib.HorizontalDown),
+                  vl = this._store.get(Rib.VerticalLeft),
+                  lhu = this._store.get(Rib.LeftHorizontalUp);
+
+            if (rhu.isTouching(cursor.point, cursor.spatia))
+                this._start.shift(0, dY);
+            else if (vr.isTouching(cursor.point, cursor.spatia))
+                this._rightOffset.shift(dX, 0);
+            else if (hd.isTouching(cursor.point, cursor.spatia))
+                this._rightOffset.shift(0, dY);
+            else if (vl.isTouching(cursor.point, cursor.spatia))
+                this._leftOffset += dX;
+            else if (lhu.isTouching(cursor.point, cursor.spatia))
+                this._end.shift(0, dY);
+        }
+
         this._calcRibs();
     }
 }
@@ -378,26 +1009,31 @@ class ElementArrowGroup extends Group {
 
         return {
             id: obj._id,
-            shape: NaiveVerticalStepline.toJSON(store.get(Member.Shape)[0]),
+            shape: obj._lineType.toJSON(store.get(Member.Shape)[0]),
             name: Text.toJSON(store.get(Member.Name)[0]),
             designation: Text.toJSON(store.get(Member.Designation)[0]),
+            lineType: store.get(Member.Shape)[0].constructor.name,
         };
     }
 
     static applyJSON(json, obj, operator) {
-        const shape = NaiveVerticalStepline.fromJSON(json.shape),
+        const lineType = eval(json.lineType);
+        const shape = lineType.fromJSON(json.shape),
               name = Text.fromJSON(json.name),
               designation = Text.fromJSON(json.designation);
 
-        obj.init(json.id, operator,
-                 {
-                     start: shape._start,
-                     end: shape._end,
-                 },
-                 {
-                     name: name.value,
-                     designation: designation.value
-                 });
+        obj.init(
+            json.id, operator,
+            {
+                start: shape._start,
+                end: shape._end,
+            },
+            {
+                name: name.value,
+                designation: designation.value
+            },
+            lineType,
+        );
     }
 
     static fromJSON(json, operator) {
@@ -406,7 +1042,7 @@ class ElementArrowGroup extends Group {
         return obj;
     }
 
-    init(id, operator, coords, labels) {
+    init(id, operator, coords, labels, lineType) {
         if (!coords?.start || !coords?.end)
             return new Fail();
 
@@ -417,14 +1053,16 @@ class ElementArrowGroup extends Group {
         const group = super.init(id, operator);
 
         const start = coords.start, end = coords.end;
-        const stepline = new NaiveVerticalStepline(start, end),
-              center = stepline.getCenter();
+
+        const lt = lineType ?? this.getLineType(start, end);
+        const line = new lt(start, end),
+              center = line.center;
         const nameOffset = Defaults.element.arrow.name.offset,
               designationOffset = Defaults.element.arrow.designation.offset;
 
         const store = this._store;
         store.set(Member.Shape, [
-            stepline,
+            line,
             operator.createPolyline()
         ]);
         store.set(Member.Name, [
@@ -448,7 +1086,53 @@ class ElementArrowGroup extends Group {
         }
 
         this._init = true;
+        this._lineType = lineType;
+
         return group;
+    }
+
+    getLineType(point1, point2) {
+        const side = Spatia.RectSide;
+
+        const side1 = point1.side, side2 = point2.side;
+        if (side1 === side.Left) {
+            if (side2 === side.Left || side2 === side.Right)
+                return HorizontalStepline;
+            if (side2 === side.Up || side2 === side.Down)
+                return AngleLine;
+        }
+        if (side1 === side.Right) {
+            if (side2 === side.Left) {
+                if (point2.x > point1.x)
+                    return HorizontalStepline;
+                else
+                    return ULine;
+            }
+            if (side2 === side.Right)
+                return HorizontalStepline;
+            if (side2 === side.Up || side2 === side.Down)
+                return AngleLine;
+        }
+        if (side1 === side.Up) {
+            if (side2 === side.Left || side2 === side.Right) {
+                if (point2.x > point1.x)
+                    return AngleLine;
+                else
+                    return BLine;
+            }
+            if (side2 === side.Up || side2 === side.Down)
+                return VerticalStepline;
+        }
+        if (side1 === side.Down) {
+            if (side2 === side.Left || side2 === side.Right) {
+                if (point2.x > point1.x)
+                    return AngleLine;
+                else
+                    return BLine;
+            }
+            if (side2 === side.Up || side2 === side.Down)
+                return VerticalStepline;
+        }
     }
 
     add() { return new Fail(); }
@@ -499,7 +1183,7 @@ class ElementArrowGroup extends Group {
         shape[0].shift(dX, dY, flags);
         operator.applyTo(shape[1], shape[0].publish());
 
-        const center = shape[0].getCenter();
+        const center = shape[0].center;
         const nameOffset = Defaults.element.arrow.name.offset,
               designationOffset = Defaults.element.arrow.designation.offset;
 

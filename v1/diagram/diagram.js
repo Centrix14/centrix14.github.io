@@ -62,6 +62,13 @@ class Process extends Accordance {
 }
 
 class Element extends Accordance {
+    static Role = {
+        Input: 'input',
+        Output: 'output',
+        Doer: 'doer',
+        Mean: 'mean',
+    }
+
     static toJSON(obj) {
         return {
             ...super.toJSON(obj),
@@ -78,6 +85,19 @@ class Element extends Accordance {
         const obj = new Element();
         Element.applyJSON(json, obj);
         return obj;
+    }
+
+    static getRoleBySide(side) {
+        const Side = Spatia.RectSide, Role = Element.Role;
+
+        const map = new Map([
+            [Side.Up, Role.Doer],
+            [Side.Right, Role.Output],
+            [Side.Down, Role.Mean],
+            [Side.Left, Role.Input],
+        ]);
+
+        return map.get(side);
     }
 
     constructor(name, note) {
@@ -537,7 +557,7 @@ class Diagram {
 
         this._name = '';
         this._author = '';
-        this._changed = null;
+        this._changed = wellDate(new Date());
     }
 
     init(operator, canv, defaults) {
@@ -632,15 +652,8 @@ class Diagram {
     }
 
     dropSelection() {
-        if (this._selected !== null && this._selected !== undefined) {
+        if (isPresent(this._selected)) {
             const id = this._selected;
-
-            const unit = this._graph.getNode(id);
-            if (unit.type === Unit.Type.Process)
-                this._index.process.user--;
-            else if (unit.type === Unit.Type.Element)
-                this._index.element--;
-            this._index.total--;
 
             this.clearSelection();
             this._graph.dropNode(id);
@@ -648,7 +661,7 @@ class Diagram {
         }
     }
 
-    shift(id, dX, dY) {
+    shift(id, dX, dY, flags) {
         const graph = this._graph;
 
         const unit = graph.getNode(id);
@@ -656,8 +669,15 @@ class Diagram {
             return;
 
         const gs = unit._accordanceGS;
-        if (gs instanceof ElementGeometrySet)
+        if (gs instanceof ElementGeometrySet) {
+            gs.shift(dX, dY, {
+                cursor: {
+                    point: flags.point,
+                    spatia: this._spatia,
+                }
+            });
             return;
+        }
 
         gs.shift(dX, dY);
 
@@ -665,19 +685,22 @@ class Diagram {
         for (let adjacentId of adjacents) {
             const connection = graph.getAdjacencyData(id, adjacentId);
 
-            if (connection?.role === 'start' || connection?.role === 'end') {
+            if (connection?.position === 'start'
+                || connection?.position === 'end') {
                 const adjacentGS = graph.getNode(adjacentId)._accordanceGS;
 
-                if (connection?.role === 'start') {
+                if (connection?.position === 'start') {
                     adjacentGS.shift(dX, dY, {
-                        start: true,
-                        end: false
+                        auto: {
+                            start: true,
+                        }
                     });
                 }
-                else if (connection?.role === 'end') {
+                else if (connection?.position === 'end') {
                     adjacentGS.shift(dX, dY, {
-                        start: false,
-                        end: true
+                        auto: {
+                            end: true,
+                        }
                     });
                 }
             }

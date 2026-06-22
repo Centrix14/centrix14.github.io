@@ -1,9 +1,22 @@
 const canvas = document.querySelector('.canvas');
 
 const statusBar = {
+    color: {
+        info: '#717d8e',
+        error: '#ff3737',
+    },
+
     element: document.querySelector('.menu-status-bar > p'),
 
-    print: (text) => statusBar.element.innerText = text
+    talk: (text) => {
+        statusBar.element.innerText = text;
+        statusBar.element.style.color = statusBar.color.info;
+    },
+
+    scold: (text) => {
+        statusBar.element.innerText = '❌ ' + text;
+        statusBar.element.style.color = statusBar.color.error;
+    },
 }
 
 const SVG = {
@@ -73,8 +86,6 @@ class Palette {
     }
 
     constructor(app) {
-        function elm(selector) { return document.querySelector(selector); }
-
         this._app = app;
 
         this.diagram = {
@@ -550,8 +561,6 @@ class ButtonHandler extends EventHandler {
                 start: this._start,
                 end: new Point(0,0)
             });
-
-            console.log(`Element src = ${this._start.x} ${this._start.y}`);
         }
         else if (this.state === ButtonHandler.State.ElementSrcSet) {
             if (event.type === 'mouseup') { // second process selected
@@ -595,17 +604,17 @@ class ButtonHandler extends EventHandler {
                 graph.connect(processId.start, elementId, {
                     direction: ConnectDirections.Both,
                     data: {
-                        role: 'start'
+                        position: 'start',
+                        role: Element.getRoleBySide(coords.start.side),
                     }
                 });
                 graph.connect(elementId, processId.end, {
                     direction: ConnectDirections.Both,
                     data: {
-                        role: 'end'
+                        position: 'end',
+                        role: Element.getRoleBySide(coords.end.side),
                     }
                 });
-
-                console.log(`Element dst = ${this._end.x} ${this._end.y}`);
             }
             else { // searching second process
                 this._end = SVG.translateToPoint(event.x, event.y);
@@ -761,12 +770,26 @@ class Application {
         this.state = Application.State.Idle;
 
         this.canvas = new Canvas(canvas);
+
+        this.dialog = {
+            about: new AboutDialog(),
+            elementExport: new ElementExportDialog(this),
+            riskRegistry: new RiskRegistryDialog(this),
+            processRegistry: new ProcessRegistryDialog(this),
+        };
+
         this.diagram = new Diagram();
         this.diagram.init(SVG, this.canvas, Defaults.diagram);
 
+        this.palette = new Palette(this);
+        this.palette.data = {
+            diagram: Diagram.toJSON(this.diagram),
+        };
+
         this.buttons = new ButtonHandler(this);
         this.mouse = new MouseHandler(this);
-        this.palette = new Palette(this);
+
+        this.csv = new CSVExport();
     }
 
     startEvent(handler, event) {
@@ -838,17 +861,41 @@ class Application {
 
             // moving
             if (result.isOk)
-                diagram.shift(result.get('id'), delta.x, delta.y);
+                diagram.shift(result.get('id'), delta.x, delta.y, {point: s});
             else {
                 const selection = diagram.getSelection();
 
                 // resizing
                 if (selection && selection.type !== Unit.Type.Element) {
+                    // resize unit itself
                     selection.setSize({
                         width: delta.x,
                         height: delta.y,
                         increment: true,
                     });
+
+                    // shift arrows
+                    const id = diagram._selected;
+                    const graph = diagram._graph;
+                    const adjacents = graph.getAdjacents(id);
+                    for (let adjacentId of adjacents) {
+                        const connection =
+                              graph.getAdjacencyData(id, adjacentId);
+
+                        if (connection?.position === 'start') {
+                            const adjacentGS =
+                                  graph.getNode(adjacentId)._accordanceGS;
+                            adjacentGS.shift(
+                                delta.x,
+                                delta.y,
+                                {
+                                    auto: {
+                                        start: true,
+                                    }
+                                }
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -928,7 +975,7 @@ class Application {
     applyToDiagram(data) {
         this.diagram._name = data.name;
         this.diagram._author = data.author;
-        this.diagram._changed = data.changed;
+        this.diagram._changed = (data.changed === '') ? null : data.changed;
     }
 
     applyToSelection(data) {
@@ -943,16 +990,6 @@ class Application {
 
         const group = canvas.querySelector(`g[id="${id}"]`);
         canvas.removeChild(group);
-    }
-
-    setEvents(definition) {
-        for (let event in definition) {
-            for (let [selector, scope, func] of definition[event]) {
-                document
-                    .querySelector(selector)
-                    .addEventListener(event, (e)=>func.call(scope, e));
-            }
-        }
     }
 
     newFile() {
@@ -1004,27 +1041,47 @@ class Application {
 
     save() {
         const contents = JSON.stringify(Diagram.toJSON(this.diagram));
-        saveString(contents, 'application/json', 'diagram.idf');
+        saveData(contents, MIME.json, 'diagram.idf');
+    }
+
+    exportPNG() {
+        const exporter = new PNGExport({ scale: 1 });
+
+        exporter.make(canvas, (blob) => {
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'diagram.png';
+            a.click();
+
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    exportAccordanceCSV() {
+        const units = this.diagram.graph.nodes(NodeFields.Data);
+        saveData(this.csv.exportAccordance(units),
+                 MIME.csv, 'accordance.csv');
     }
 
     exportProcessCSV() {
         const units = this.diagram.graph.nodes(NodeFields.Data);
-        saveString(exportProcessesToCSV(units), 'text/csv', 'process.csv');
+        saveData(this.csv.exportProcess(units), MIME.csv, 'process.csv');
     }
 
     exportDeviationCSV() {
         const units = this.diagram.graph.nodes(NodeFields.Data);
-        saveString(exportDeviationsToCSV(units), 'text/csv', 'deviation.csv');
+        saveData(this.csv.exportDeviation(units),
+                 MIME.csv, 'deviation.csv');
     }
 
     exportRisksCSV() {
         const units = this.diagram.graph.nodes(NodeFields.Data);
-        saveString(exportRisksToCSV(units), 'text/csv', 'risk.csv');
+        saveData(this.csv.exportRisk(units), MIME.csv, 'risk.csv');
     }
 
-    buildDiagramTree() {
-        const units = this.diagram.graph.nodes(NodeFields.Data);
-
+    exportStructure() {
         const tab = window.open();
         if (!tab)
             return;
@@ -1034,24 +1091,27 @@ class Application {
         const link = doc.createElement('link');
         link.rel = 'stylesheet';
         link.href = 'css/tree.css';
-
         doc.head.appendChild(link);
 
-        const diagramJSON = Diagram.toJSON(this.diagram);
-        appendDiagramHeading(diagramJSON.name, doc);
-        appendDiagramCredentials(diagramJSON, doc);
+        const exporter = new HTMLExportStructure();
 
-        buildDiagramTree(units, tab.document);
+        const units = this.diagram.graph.nodes(NodeFields.Data);
+        const json = Diagram.toJSON(this.diagram);
+
+        const heading = exporter.makeDiagramHeading(json.name, doc);
+        doc.body.appendChild(heading);
+
+        const credentials = exporter.makeDiagramCredentials(json, doc);
+        doc.body.appendChild(credentials);
+
+        const tree = exporter.buildTree(units, tab.document);
+        doc.body.appendChild(tree);
     }
-}
-
-function isEmpty(value) {
-    return value === null || value === undefined;
 }
 
 const app = new Application();
 
-app.setEvents({
+setEvents({
     'click': [
         ['#cursorBtn', app.buttons, app.buttons.cursorClick],
 
@@ -1068,11 +1128,23 @@ app.setEvents({
         ['#openFileBtn', app, app.open],
         ['#saveFileBtn', app, app.save],
 
-        ['#exportPngBtn', null, ()=>exportToPng(canvas)],
-        ['#exportProcessCSVBtn', app, app.exportProcessCSV],
-        ['#exportDeviationCSVBtn', app, app.exportDeviationCSV],
-        ['#exportRiskCSVBtn', app, app.exportRisksCSV],
-        ['#buildDiagramTree', app, app.buildDiagramTree],
+        ['#exportPngBtn', app, app.exportPNG],
+
+        ['#exportAccordanceBtn', app, app.exportAccordanceCSV],
+        ['#exportProcessBtn', app, app.exportProcessCSV],
+        ['#exportDeviationBtn', app, app.exportDeviationCSV],
+        ['#exportRiskBtn', app, app.exportRisksCSV],
+        ['#exportStructureBtn', app, app.exportStructure],
+
+        ['#openAboutDialogBtn', app.dialog.about, app.dialog.about.show],
+
+        ['#exportElementBtn', app.dialog.elementExport,
+         app.dialog.elementExport.show],
+
+        ['#riskRegistryBtn', app.dialog.riskRegistry,
+         app.dialog.riskRegistry.show],
+        ['#processRegistryBtn', app.dialog.processRegistry,
+         app.dialog.processRegistry.show],
     ],
 
     'mousedown': [['.canvas', app.mouse, app.mouse.down]],

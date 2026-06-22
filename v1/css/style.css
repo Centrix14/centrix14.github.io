@@ -15,10 +15,12 @@
     --canvas-border: #ced4da;
 
     --status-bar-fg: #717d8e;
+
+    --font-family: sans-serif;
 }
 
 html {
-    font-family: system-ui;
+    font-family: var(--font-family);
 }
 
 /* Common styles and page layout */
@@ -69,7 +71,6 @@ body {
 
 .menu-status-bar > p {
     font-size: 14px;
-    color: var(--status-bar-fg);
 }
 
 .menu-dropdown {
@@ -78,6 +79,7 @@ body {
 
 .menu-dropdown-button {
     font-size: 16px;
+    font-family: var(--font-family);
     
     background-color: var(--bg);
     
@@ -115,6 +117,11 @@ body {
     color: blue;
 }
 
+.menu-dropdown-item > a {
+    text-decoration: none;
+    color: inherit;
+}
+
 .icon {
     width: 20px;
     height: 20px;
@@ -142,6 +149,8 @@ body {
 }
 
 .panel-button {
+    font-family: var(--font-family);
+
     background-color: var(--touchable);
     border: none;
 }
@@ -151,7 +160,6 @@ body {
 .panel-button:active {
     background-color: var(--touchable-active);
 }
-
 .panel-button:disabled {
     background-color: var(--empty);
 
@@ -178,28 +186,6 @@ body {
     height: 97%;
 }
 
-svg #name, svg #designation {
-    user-select: none;
-}
-
-textarea {
-    font-family: sans;
-    font-size: 10pt;
-}
-
-svg .htmltext-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    height: 100%;
-    overflow: scroll;
-}
-
-svg .htmltext-p {
-    text-align: center;
-}
-
 /* Palette */
 
 .palette {
@@ -211,6 +197,8 @@ svg .htmltext-p {
 }
 
 .palette-button {
+    font-family: var(--font-family);
+
     padding: 2%;
 }
 
@@ -231,6 +219,11 @@ svg .htmltext-p {
     content: "\00A7";
 }
 
+.palette textarea {
+    font-family: sans;
+    font-size: 10pt;
+}
+
 .palette-input-label {
     font-size: 15px;
 }
@@ -241,6 +234,8 @@ svg .htmltext-p {
 }
 
 .link-button {
+    font-family: var(--font-family);
+
     color: var(--existance);
     background-color: var(--bg);
     
@@ -271,4 +266,74 @@ svg .htmltext-p {
 }
 .palette-notebook > .palette-tab-radio:checked + label {
     border-bottom: solid black 1px;
+}
+
+/* Dialog */
+
+dialog {
+    border: none;
+    border-radius: 10px;
+}
+
+.dialog-header {
+    align-content: center;
+}
+
+.dialog-title {
+    font-weight: bold;
+    text-align: center;
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.dialog-action-btn {
+    margin: 1%;
+
+    padding: 5px;
+    outline: none;
+    border: none;
+    border-radius: 5px;
+
+    background-color: aquamarine;
+}
+.dialog-action-btn:hover {
+    background-color: antiquewhite;
+}
+
+.dialog-close-btn {
+    margin: 1%;
+
+    padding: 5px;
+    outline: none;
+    border: none;
+    border-radius: 5px;
+
+    background-color: ghostwhite;
+}
+
+.dialog-body-table {
+    padding-bottom: 5%;
+    border-spacing: 5px;
+}
+
+/* About dialog */
+
+.about-dialog-pane {
+    display: inline-block;
+}
+
+#about-dialog-logo {
+    margin-right: 0.5vw;
+}
+
+#about-dialog-logo > img {
+    width: 128px;
+    height: 128px;
+}
+
+#about-dialog-info > table {
+    border-spacing: 10px;
 }
